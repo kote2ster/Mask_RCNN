@@ -66,7 +66,7 @@ class BlobConfig(Config):
     IMAGES_PER_GPU = 1
 
     # Number of classes (including background)
-    NUM_CLASSES = 1 + 1  # Background + blob
+    NUM_CLASSES = 1 + 1 + 1 + 1  # Background + blob + calibration + pq
 
     # Number of training steps per epoch
     STEPS_PER_EPOCH = 100
@@ -91,8 +91,8 @@ class BlobDataset(utils.Dataset):
         """
         # Add classes. We have only one class to add.
         self.add_class("blob", 1, "blob")
-        #self.add_class("blob1", 2, "blob1")
-        #self.add_class("blob2", 3, "blob2")
+        self.add_class("calibration", 2, "calibration")
+        self.add_class("pq", 3, "pq")
         #self.add_class("blob3", 4, "blob3")
 
         # Train or validation dataset?
