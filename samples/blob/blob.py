@@ -66,7 +66,7 @@ class BlobConfig(Config):
     IMAGES_PER_GPU = 1
 
     # Number of classes (including background)
-    NUM_CLASSES = 1 + 1 + 1 + 1  # Background + blob + calibration + pq
+    NUM_CLASSES = 1 + 3  # Background + blob + calibration + pq
 
     # Number of training steps per epoch
     STEPS_PER_EPOCH = 100
@@ -91,9 +91,11 @@ class BlobDataset(utils.Dataset):
         """
         # Add classes. We have only one class to add.
         self.add_class("blob", 1, "blob")
-        self.add_class("calibration", 2, "calibration")
-        self.add_class("pq", 3, "pq")
+        self.add_class("blob", 2, "calibration")
+        self.add_class("blob", 3, "pq")
         #self.add_class("blob3", 4, "blob3")
+
+        name_dict = {"blob": 1, "calibration": 2, "pq": 3}
 
         # Train or validation dataset?
         assert subset in ["train", "val"]
@@ -130,8 +132,11 @@ class BlobDataset(utils.Dataset):
             # The if condition is needed to support VIA versions 1.x and 2.x.
             if type(a['regions']) is dict:
                 polygons = [r['shape_attributes'] for r in a['regions'].values()]
+                objects = [r['region_attributes']['name'] for r in a['regions'].values()]
             else:
-                polygons = [r['shape_attributes'] for r in a['regions']] 
+                polygons = [r['shape_attributes'] for r in a['regions']]
+                objects = [r['region_attributes']['name'] for r in a['regions']]
+            num_ids = [name_dict[a] for a in objects]
 
             # load_mask() needs the image size to convert polygons to masks.
             # Unfortunately, VIA doesn't include it in JSON, so we must read
@@ -145,7 +150,8 @@ class BlobDataset(utils.Dataset):
                 image_id=a['filename'],  # use file name as a unique image id
                 path=image_path,
                 width=width, height=height,
-                polygons=polygons)
+                polygons=polygons,
+                num_ids=num_ids)
 
     def load_mask(self, image_id):
         """Generate instance masks for an image.
@@ -171,7 +177,9 @@ class BlobDataset(utils.Dataset):
 
         # Return mask, and array of class IDs of each instance. Since we have
         # one class ID only, we return an array of 1s
-        return mask.astype(bool), np.ones([mask.shape[-1]], dtype=np.int32)
+        num_ids = info['num_ids']
+        num_ids = np.array(num_ids, dtype=np.int32)
+        return mask.astype(bool), num_ids # np.ones([mask.shape[-1]], dtype=np.int32)
 
     def image_reference(self, image_id):
         """Return the path of the image."""
